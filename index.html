@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0fdf4; /* Light green background */
+        }
+        .sidebar-button {
+            @apply w-full py-3 px-4 rounded-lg bg-cyan-400 text-white font-semibold shadow-md hover:bg-cyan-500 transition-colors duration-200 mb-4;
+        }
+        .form-input {
+            @apply w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200;
+        }
+        .submit-button {
+            @apply w-full py-3 px-4 rounded-lg bg-cyan-600 text-white font-bold shadow-lg hover:bg-cyan-700 transition-colors duration-200;
+        }
+        .content-section {
+            @apply bg-white p-6 rounded-lg shadow-xl;
+        }
+        .expense-table th, .expense-table td {
+            @apply px-4 py-2 text-left border-b border-gray-200;
+        }
+        .expense-table th {
+            @apply bg-gray-50 text-gray-700 font-medium;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+    <div class="container mx-auto p-4 flex-grow flex items-center justify-center">
+        <div class="flex flex-col md:flex-row w-full max-w-6xl bg-gray-100 rounded-xl shadow-2xl overflow-hidden">
+            <!-- Sidebar / Menu -->
+            <div class="w-full md:w-1/4 bg-cyan-200 p-6 flex flex-col items-center justify-center space-y-4 rounded-t-xl md:rounded-l-xl md:rounded-t-none">
+                <button id="addExpensesBtn" class="sidebar-button">ADD EXPENSES</button>
+                <button id="checkMonthExpensesBtn" class="sidebar-button">CHECK THIS MONTH'S EXPENSES</button>
+                <button id="checkTotalExpensesBtn" class="sidebar-button">CHECK TOTAL EXPENSES</button>
+                <button id="settingsBtn" class="sidebar-button">SETTINGS</button>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="w-full md:w-3/4 p-8 bg-white rounded-b-xl md:rounded-r-xl md:rounded-b-none">
+                <!-- Add Expenses Section -->
+                <div id="addExpensesSection" class="content-section">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Add New Expense</h2>
+                    <form id="expenseForm" class="space-y-5">
+                        <div>
+                            <label for="expenseName" class="block text-gray-700 text-sm font-medium mb-2">Enter name:</label>
+                            <input type="text" id="expenseName" class="form-input" placeholder="e.g., Groceries" required>
+                        </div>
+                        <div>
+                            <label for="expenseAmount" class="block text-gray-700 text-sm font-medium mb-2">Enter amount:</label>
+                            <input type="number" id="expenseAmount" class="form-input" placeholder="e.g., 50.00" step="0.01" required>
+                        </div>
+                        <div>
+                            <label for="expenseDetails" class="block text-gray-700 text-sm font-medium mb-2">Enter details:</label>
+                            <textarea id="expenseDetails" class="form-input resize-y" rows="3" placeholder="e.g., Weekly shopping at supermarket"></textarea>
+                        </div>
+                        <button type="submit" class="submit-button">SUBMIT</button>
+                    </form>
+                    <div id="messageBox" class="mt-4 p-3 rounded-lg text-center hidden"></div>
+                </div>
+
+                <!-- Check This Month's Expenses Section -->
+                <div id="checkMonthExpensesSection" class="content-section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">This Month's Expenses</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white rounded-lg expense-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Price</th>
+                                    <th>Details</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthExpensesTableBody">
+                                <!-- Expenses will be loaded here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-6 text-right text-lg font-semibold text-gray-800">
+                        This month's Total: <span id="monthTotalAmount" class="text-cyan-600">$0.00</span>
+                    </div>
+                </div>
+
+                <!-- Check Total Expenses Section -->
+                <div id="checkTotalExpensesSection" class="content-section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Total Recorded Expenses</h2>
+                    <div id="totalExpensesList" class="space-y-4">
+                        <!-- Total expenses by month will be loaded here by JavaScript -->
+                    </div>
+                    <div class="mt-6 text-right text-lg font-semibold text-gray-800">
+                        Total recorded: <span id="overallTotalAmount" class="text-cyan-600">$0.00</span>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div id="settingsSection" class="content-section hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Settings</h2>
+                    <p class="text-gray-600 text-center">This section is under development. Future settings might include data export/import, currency preferences, etc.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const addExpensesBtn = document.getElementById('addExpensesBtn');
+        const checkMonthExpensesBtn = document.getElementById('checkMonthExpensesBtn');
+        const checkTotalExpensesBtn = document.getElementById('checkTotalExpensesBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+
+        const addExpensesSection = document.getElementById('addExpensesSection');
+        const checkMonthExpensesSection = document.getElementById('checkMonthExpensesSection');
+        const checkTotalExpensesSection = document.getElementById('checkTotalExpensesSection');
+        const settingsSection = document.getElementById('settingsSection');
+
+        const expenseForm = document.getElementById('expenseForm');
+        const expenseNameInput = document.getElementById('expenseName');
+        const expenseAmountInput = document.getElementById('expenseAmount');
+        const expenseDetailsInput = document.getElementById('expenseDetails');
+        const messageBox = document.getElementById('messageBox');
+
+        const monthExpensesTableBody = document.getElementById('monthExpensesTableBody');
+        const monthTotalAmount = document.getElementById('monthTotalAmount');
+        const totalExpensesList = document.getElementById('totalExpensesList');
+        const overallTotalAmount = document.getElementById('overallTotalAmount');
+
+        // State to keep track of all expenses
+        let expenses = [];
+
+        // Function to show a section and hide others
+        function showSection(sectionToShow) {
+            const sections = [addExpensesSection, checkMonthExpensesSection, checkTotalExpensesSection, settingsSection];
+            sections.forEach(section => {
+                if (section === sectionToShow) {
+                    section.classList.remove('hidden');
+                } else {
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Data Handling (using localStorage for demo) ---
+        // In a real application, these functions would interact with your Google Apps Script backend.
+
+        /**
+         * Loads expenses from localStorage.
+         * In a real application, this would fetch data from Google Sheets via Google Apps Script.
+         */
+        function loadExpenses() {
+            try {
+                const storedExpenses = localStorage.getItem('expenses');
+                if (storedExpenses) {
+                    expenses = JSON.parse(storedExpenses);
+                }
+            } catch (e) {
+                console.error("Error loading expenses from localStorage:", e);
+                // Handle corrupted data or storage issues
+                expenses = [];
+            }
+        }
+
+        /**
+         * Saves expenses to localStorage.
+         * In a real application, this would send data to Google Sheets via Google Apps Script.
+         * @param {Object} newExpense - The new expense object to add.
+         */
+        function saveExpense(newExpense) {
+            expenses.push(newExpense);
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            showMessageBox('Expense added successfully!', 'success'); // Changed to use messageBox function
+        }
+
+        /**
+         * Displays a message in the message box.
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success' or 'error' to apply appropriate styling.
+         */
+        function showMessageBox(message, type) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'text-green-700');
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'text-red-700');
+            }
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 3000); // Hide after 3 seconds
+        }
+
+        // --- Event Listeners ---
+        addExpensesBtn.addEventListener('click', () => showSection(addExpensesSection));
+        checkMonthExpensesBtn.addEventListener('click', () => {
+            showSection(checkMonthExpensesSection);
+            renderMonthExpenses();
+        });
+        checkTotalExpensesBtn.addEventListener('click', () => {
+            showSection(checkTotalExpensesSection);
+            renderTotalExpenses();
+        });
+        settingsBtn.addEventListener('click', () => showSection(settingsSection));
+
+        expenseForm.addEventListener('submit', (e) => {
+            e.preventDefault(); // Prevent default form submission
+
+            const name = expenseNameInput.value.trim();
+            const amount = parseFloat(expenseAmountInput.value).toFixed(2); // Ensure 2 decimal places
+            const details = expenseDetailsInput.value.trim();
+            const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+            if (name && amount && !isNaN(amount)) {
+                const newExpense = { name, amount: parseFloat(amount), details, date };
+                saveExpense(newExpense); // Save to localStorage (or send to Google Sheets)
+                expenseForm.reset(); // Clear form fields
+            } else {
+                showMessageBox('Please fill out all required fields with valid data.', 'error');
+            }
+        });
+
+        // --- Rendering Functions ---
+
+        /**
+         * Renders the expenses for the current month.
+         */
+        function renderMonthExpenses() {
+            monthExpensesTableBody.innerHTML = ''; // Clear previous entries
+            let currentMonthTotal = 0;
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const monthlyExpenses = expenses.filter(expense => {
+                const expenseDate = new Date(expense.date); // Assuming date is parsable
+                return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+            });
+
+            if (monthlyExpenses.length === 0) {
+                monthExpensesTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No expenses recorded for this month.</td></tr>';
+            } else {
+                monthlyExpenses.forEach(expense => {
+                    const row = monthExpensesTableBody.insertRow();
+                    row.classList.add('hover:bg-gray-50');
+                    row.innerHTML = `
+                        <td class="px-4 py-2">${expense.name}</td>
+                        <td class="px-4 py-2">$${expense.amount.toFixed(2)}</td>
+                        <td class="px-4 py-2">${expense.details || '-'}</td>
+                        <td class="px-4 py-2">${expense.date}</td>
+                    `;
+                    currentMonthTotal += expense.amount;
+                });
+            }
+            monthTotalAmount.textContent = `$${currentMonthTotal.toFixed(2)}`;
+        }
+
+        /**
+         * Renders the total expenses grouped by month.
+         */
+        function renderTotalExpenses() {
+            totalExpensesList.innerHTML = ''; // Clear previous entries
+            let overallTotal = 0;
+            const expensesByMonth = {};
+
+            expenses.forEach(expense => {
+                const expenseDate = new Date(expense.date);
+                const yearMonth = `${expenseDate.getFullYear()}-${(expenseDate.getMonth() + 1).toString().padStart(2, '0')}`;
+                if (!expensesByMonth[yearMonth]) {
+                    expensesByMonth[yearMonth] = { total: 0, expenses: [] };
+                }
+                expensesByMonth[yearMonth].total += expense.amount;
+                expensesByMonth[yearMonth].expenses.push(expense);
+                overallTotal += expense.amount;
+            });
+
+            // Sort months in descending order (most recent first)
+            const sortedMonths = Object.keys(expensesByMonth).sort().reverse();
+
+            if (sortedMonths.length === 0) {
+                totalExpensesList.innerHTML = '<p class="text-center py-4 text-gray-500">No total expenses recorded yet.</p>';
+            } else {
+                sortedMonths.forEach(yearMonth => {
+                    const monthName = new Date(yearMonth).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+                    const monthData = expensesByMonth[yearMonth];
+
+                    const monthDiv = document.createElement('div');
+                    monthDiv.classList.add('bg-white', 'p-4', 'rounded-lg', 'shadow', 'border', 'border-gray-200');
+                    monthDiv.innerHTML = `
+                        <h3 class="text-xl font-semibold text-gray-700 mb-2">${monthName} - Total: <span class="text-cyan-600">$${monthData.total.toFixed(2)}</span></h3>
+                        <ul class="list-disc pl-5 text-gray-600 text-sm">
+                            ${monthData.expenses.map(exp => `<li>${exp.name}: $${exp.amount.toFixed(2)} (${exp.date})</li>`).join('')}
+                        </ul>
+                    `;
+                    totalExpensesList.appendChild(monthDiv);
+                });
+            }
+            overallTotalAmount.textContent = `$${overallTotal.toFixed(2)}`;
+        }
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadExpenses(); // Load existing expenses from localStorage
+            showSection(addExpensesSection); // Show add expenses section by default
+        });
+
+        // --- Google Apps Script (Conceptual Integration) ---
+        /*
+        To integrate with Google Sheets, you would deploy a Google Apps Script as a web app.
+
+        Here's a conceptual overview of the Apps Script side:
+
+        // Code.gs (Google Apps Script file)
+        function doGet(e) {
+            // This function would handle GET requests, e.g., to retrieve all expenses
+            const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Expenses");
+            const data = sheet.getDataRange().getValues(); // Get all data
+            const headers = data.shift(); // Remove headers
+            const expenses = data.map(row => {
+                // Map row data to an object based on headers
+                let obj = {};
+                headers.forEach((header, i) => {
+                    obj[header.toLowerCase()] = row[i];
+                });
+                return obj;
+            });
+            return ContentService.createTextOutput(JSON.stringify(expenses))
+                   .setMimeType(ContentService.MimeType.JSON);
+        }
+
+        function doPost(e) {
+            // This function would handle POST requests, e.g., to add a new expense
+            const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Expenses");
+            const requestData = JSON.parse(e.postData.contents); // Parse the incoming JSON
+            const { name, amount, details, date } = requestData; // Destructure the expense object
+
+            // Append a new row to the sheet
+            sheet.appendRow([name, amount, details, date]);
+
+            return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Expense added" }))
+                   .setMimeType(ContentService.MimeType.JSON);
+        }
+
+        // On the client-side (in this JavaScript file), you would then use `fetch` to call your deployed Apps Script web app:
+
+        // Example for adding an expense:
+        // async function sendExpenseToSheets(expense) {
+        //     const appsScriptUrl = 'YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL'; // Get this after deploying your script
+        //     try {
+        //         const response = await fetch(appsScriptUrl, {
+        //             method: 'POST',
+        //             headers: {
+        //                 'Content-Type': 'application/json',
+        //             },
+        //             body: JSON.stringify(expense),
+        //         });
+        //         const result = await response.json();
+        //         console.log('Apps Script response:', result);
+        //         if (result.status === 'success') {
+        //             showMessageBox('Expense added successfully to Google Sheet!', 'success');
+        //             // After successful add, you might want to re-fetch data to update the UI
+        //             // fetchExpensesFromSheets();
+        //         } else {
+        //             showMessageBox('Error adding expense to Google Sheet.', 'error');
+        //         }
+        //     } catch (error) {
+        //         console.error('Error connecting to Apps Script:', error);
+        //         showMessageBox('Network error or problem connecting to Google Sheets.', 'error');
+        //     }
+        // }
+
+        // Example for fetching expenses:
+        // async function fetchExpensesFromSheets() {
+        //     const appsScriptUrl = 'YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL';
+        //     try {
+        //         const response = await fetch(appsScriptUrl); // GET request
+        //         const data = await response.json();
+        //         expenses = data; // Update local expenses array
+        //         renderMonthExpenses();
+        //         renderTotalExpenses();
+        //     } catch (error) {
+        //         console.error('Error fetching expenses from Apps Script:', error);
+        //         showMessageBox('Error fetching data from Google Sheets.', 'error');
+        //     }
+        // }
+        // Call fetchExpensesFromSheets() on initial load or after adding/deleting data.
+        */
+    </script>
+</body>
+</html>
